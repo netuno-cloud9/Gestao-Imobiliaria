@@ -2,65 +2,98 @@ package aluno_unisenai.gestao_estoque;
 
 import javax.swing.*;
 import java.awt.*;
+import java.sql.*;
 
 public class TelaLogin extends JFrame {
 
     public TelaLogin() {
         setTitle("Login - Gerenciamento de Estoque");
-        setSize(400, 300);
+        setSize(500, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new GridBagLayout());
+        setLayout(new GridBagLayout()); // Layout principal como GridBagLayout
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+
+        // Painel Principal
+        JPanel painelPrincipal = criarPainelPrincipal();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        add(painelPrincipal, gbc);
+    }
+
+    /**
+     * Cria o painel principal da interface.
+     *
+     * @return JPanel configurado.
+     */
+    private JPanel criarPainelPrincipal() {
+        JPanel painelPrincipal = new JPanel(new GridBagLayout());
+        painelPrincipal.setBackground(Color.WHITE);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Título
-        JLabel lblTitulo = new JLabel("Login");
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 20));
-        lblTitulo.setForeground(new Color(50, 50, 150));
+        JLabel lblTitulo = new JLabel("Bem-vindo!");
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 24));
+        lblTitulo.setForeground(new Color(70, 130, 180));
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
-        add(lblTitulo, gbc);
+        painelPrincipal.add(lblTitulo, gbc);
 
-        // Usuário
-        JLabel lblUsuario = new JLabel("Usuário:");
-        lblUsuario.setFont(new Font("Arial", Font.PLAIN, 14));
-        gbc.gridx = 0;
+        // Imagem de Logotipo
+        JLabel lblImagem = new JLabel(new ImageIcon("resources/logo.png")); // Altere para o caminho correto da imagem
         gbc.gridy = 1;
+        painelPrincipal.add(lblImagem, gbc);
+
+        // Campo de Usuário
+        JLabel lblUsuario = new JLabel("Usuário:");
+        lblUsuario.setFont(new Font("Arial", Font.PLAIN, 16));
         gbc.gridwidth = 1;
-        add(lblUsuario, gbc);
+        gbc.gridy = 2;
+        gbc.gridx = 0;
+        painelPrincipal.add(lblUsuario, gbc);
 
         JTextField txtUsuario = new JTextField(20);
+        txtUsuario.setFont(new Font("Arial", Font.PLAIN, 14));
         gbc.gridx = 1;
-        add(txtUsuario, gbc);
+        painelPrincipal.add(txtUsuario, gbc);
 
-        // Senha
+        // Campo de Senha
         JLabel lblSenha = new JLabel("Senha:");
-        lblSenha.setFont(new Font("Arial", Font.PLAIN, 14));
+        lblSenha.setFont(new Font("Arial", Font.PLAIN, 16));
+        gbc.gridy = 3;
         gbc.gridx = 0;
-        gbc.gridy = 2;
-        add(lblSenha, gbc);
+        painelPrincipal.add(lblSenha, gbc);
 
         JPasswordField txtSenha = new JPasswordField(20);
+        txtSenha.setFont(new Font("Arial", Font.PLAIN, 14));
         gbc.gridx = 1;
-        add(txtSenha, gbc);
+        painelPrincipal.add(txtSenha, gbc);
 
         // Botão de Login
         JButton btnLogin = new JButton("Entrar");
-        btnLogin.setFont(new Font("Arial", Font.BOLD, 14));
+        btnLogin.setFont(new Font("Arial", Font.BOLD, 16));
         btnLogin.setBackground(new Color(70, 130, 180));
         btnLogin.setForeground(Color.WHITE);
+        gbc.gridy = 4;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        painelPrincipal.add(btnLogin, gbc);
 
+        // Ação do botão de login
         btnLogin.addActionListener(e -> {
             String usuario = txtUsuario.getText();
             String senha = new String(txtSenha.getPassword());
 
-            // Validação simples de credenciais
-            if ("admin".equals(usuario) && "1234".equals(senha)) {
+            if (validarCredenciais(usuario, senha)) {
                 JOptionPane.showMessageDialog(this, "Bem-vindo!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 SwingUtilities.invokeLater(() -> {
                     new MainUI().setVisible(true);
@@ -73,10 +106,49 @@ public class TelaLogin extends JFrame {
             }
         });
 
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        add(btnLogin, gbc);
+        return painelPrincipal;
+    }
+
+    /**
+     * Valida as credenciais fornecidas com base no banco de dados.
+     *
+     * @param usuario Nome de usuário.
+     * @param senha   Senha.
+     * @return true se forem válidas, false caso contrário.
+     */
+    private boolean validarCredenciais(String usuario, String senha) {
+        String url = Configuracao.get("db.url");
+        String user = Configuracao.get("db.user");
+        String password = Configuracao.get("db.password");
+
+        System.out.println("Tentando conectar ao banco de dados:");
+        System.out.println("URL: " + url);
+        System.out.println("Usuário: " + user);
+
+        String sql = "SELECT senha FROM usuarios WHERE nome_usuario = ?";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, usuario);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String senhaArmazenada = rs.getString("senha");
+                System.out.println("Senha armazenada para o usuário: " + senhaArmazenada);
+                return senha.equals(senhaArmazenada); // Comparação direta (considere hashing para produção)
+            } else {
+                System.out.println("Usuário não encontrado: " + usuario);
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao conectar ao banco remoto: " + ex.getMessage(),
+                    "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
+        }
+
+        return false;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new TelaLogin().setVisible(true));
     }
 }

@@ -620,6 +620,6 @@ private JButton criarBotaoComEstilo(String texto, String iconeCaminho, ActionLis
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MainUI().setVisible(true));
+        SwingUtilities.invokeLater(() -> new TelaLogin().setVisible(true));
     }
 }
