@@ -2,6 +2,7 @@ package aluno_unisenai.gestao_estoque;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.sql.SQLException;
@@ -390,60 +391,155 @@ public class MainUI extends JFrame {
 }
 
 
-    private JPanel criarPainelExcluir() {
-        JPanel painel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+   private JPanel criarPainelExcluir() {
+    // Painel principal
+    JPanel painel = new JPanel(new GridBagLayout());
+    painel.setBackground(new Color(245, 245, 245)); // Fundo claro
 
-        JLabel lblId = new JLabel("ID:");
-        JTextField txtId = new JTextField(10);
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JButton btnExcluir = criarBotao("Excluir", e -> {
+    // Título
+    JLabel titulo = new JLabel("Excluir Produto");
+    titulo.setFont(new Font("Arial", Font.BOLD, 18));
+    titulo.setForeground(new Color(50, 50, 50));
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.gridwidth = 2;
+    painel.add(titulo, gbc);
+
+    // Subtítulo
+    JLabel subtitulo = new JLabel("Insira o ID do produto que deseja excluir.");
+    subtitulo.setFont(new Font("Arial", Font.PLAIN, 14));
+    subtitulo.setForeground(new Color(100, 100, 100));
+    gbc.gridy = 1;
+    painel.add(subtitulo, gbc);
+
+    gbc.gridwidth = 1; // Resetando gridwidth
+
+    // Campo para ID
+    JLabel lblId = new JLabel("ID do Produto:");
+    lblId.setFont(new Font("Arial", Font.BOLD, 14));
+    lblId.setForeground(new Color(50, 50, 50));
+    gbc.gridx = 0;
+    gbc.gridy = 2;
+    painel.add(lblId, gbc);
+
+    JTextField txtId = new JTextField(10);
+    txtId.setFont(new Font("Arial", Font.PLAIN, 14));
+    gbc.gridx = 1;
+    painel.add(txtId, gbc);
+
+    // Botão Excluir com confirmação
+    JButton btnExcluir = criarBotao("Excluir Produto", e -> {
+        String idStr = txtId.getText().trim();
+        if (idStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor, insira um ID válido.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int confirmacao = JOptionPane.showConfirmDialog(
+            this,
+            "Tem certeza de que deseja excluir o produto com ID " + idStr + "?",
+            "Confirmação",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirmacao == JOptionPane.YES_OPTION) {
             try {
-                int id = Integer.parseInt(txtId.getText());
+                int id = Integer.parseInt(idStr);
                 produtoDAO.excluir(id);
                 JOptionPane.showMessageDialog(this, "Produto excluído com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-                txtId.setText("");
+                txtId.setText(""); // Limpa o campo de texto
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "ID deve ser um número válido!", "Erro", JOptionPane.ERROR_MESSAGE);
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao excluir produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
-        });
+        }
+    });
 
-        gbc.gridx = 0; gbc.gridy = 0; painel.add(lblId, gbc);
-        gbc.gridx = 1; painel.add(txtId, gbc);
-        gbc.gridx = 1; gbc.gridy = 1; painel.add(btnExcluir, gbc);
+    btnExcluir.setIcon(new ImageIcon("resources/delete_icon.png")); // Adicione um ícone relevante
+    btnExcluir.setBackground(new Color(220, 20, 60)); // Cor vermelha para ação crítica
+    btnExcluir.setForeground(Color.WHITE);
+    btnExcluir.setFont(new Font("Arial", Font.BOLD, 14));
 
-        return painel;
-    }
+    gbc.gridx = 0;
+    gbc.gridy = 3;
+    gbc.gridwidth = 2;
+    painel.add(btnExcluir, gbc);
+
+    // Mensagem adicional (opcional)
+    JLabel mensagemSeguranca = new JLabel("<html><i>Exclusões são permanentes e não podem ser desfeitas.</i></html>");
+    mensagemSeguranca.setFont(new Font("Arial", Font.PLAIN, 12));
+    mensagemSeguranca.setForeground(new Color(150, 50, 50));
+    gbc.gridy = 4;
+    painel.add(mensagemSeguranca, gbc);
+
+    return painel;
+}
+
 
     private JPanel criarPainelBackup() {
-        JPanel painel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+    // Painel principal
+    JPanel painel = new JPanel(new GridBagLayout());
+    painel.setBackground(new Color(245, 245, 245)); // Fundo claro
 
-        JButton btnBackup = criarBotao("Realizar Backup", e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Salvar Backup");
-            int userSelection = fileChooser.showSaveDialog(this);
-            if (userSelection == JFileChooser.APPROVE_OPTION) {
-                java.io.File fileToSave = fileChooser.getSelectedFile();
-                try {
-                    produtoDAO.realizarBackupParaCSV(fileToSave.getAbsolutePath());
-                    JOptionPane.showMessageDialog(this, "Backup realizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Erro ao realizar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-                }
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+
+    // Título
+    JLabel titulo = new JLabel("Gerenciamento de Backups");
+    titulo.setFont(new Font("Arial", Font.BOLD, 18));
+    titulo.setForeground(new Color(50, 50, 50));
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.gridwidth = 2;
+    painel.add(titulo, gbc);
+
+    // Subtítulo
+    JLabel subtitulo = new JLabel("<html>Salve um backup do estoque ou importe um arquivo existente.<br>Tenha cuidado, a importação substituirá os dados atuais.</html>");
+    subtitulo.setFont(new Font("Arial", Font.PLAIN, 14));
+    subtitulo.setForeground(new Color(100, 100, 100));
+    gbc.gridy = 1;
+    painel.add(subtitulo, gbc);
+
+    gbc.gridwidth = 1; // Resetando gridwidth
+
+    // Botão Realizar Backup
+    JButton btnBackup = criarBotaoComEstilo("Realizar Backup", "resources/backup_icon.png", e -> {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Salvar Backup");
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            java.io.File fileToSave = fileChooser.getSelectedFile();
+            try {
+                produtoDAO.realizarBackupParaCSV(fileToSave.getAbsolutePath());
+                JOptionPane.showMessageDialog(this, "Backup realizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Erro ao realizar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
-        });
+        }
+    });
 
-        JButton btnImportarBackup = criarBotao("Importar Backup", e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Selecionar Backup para Importar");
-            int userSelection = fileChooser.showOpenDialog(this);
-            if (userSelection == JFileChooser.APPROVE_OPTION) {
-                java.io.File fileToImport = fileChooser.getSelectedFile();
+    // Botão Importar Backup
+    JButton btnImportarBackup = criarBotaoComEstilo("Importar Backup", "resources/import_icon.png", e -> {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Selecionar Backup para Importar");
+        int userSelection = fileChooser.showOpenDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            java.io.File fileToImport = fileChooser.getSelectedFile();
+            int confirmacao = JOptionPane.showConfirmDialog(
+                this,
+                "Tem certeza de que deseja importar este backup? Isso substituirá os dados atuais.",
+                "Confirmação",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            );
+            if (confirmacao == JOptionPane.YES_OPTION) {
                 try {
                     produtoDAO.importarBackupDeCSV(fileToImport.getAbsolutePath());
                     JOptionPane.showMessageDialog(this, "Backup importado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -451,13 +547,40 @@ public class MainUI extends JFrame {
                     JOptionPane.showMessageDialog(this, "Erro ao importar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
                 }
             }
-        });
+        }
+    });
 
-        gbc.gridx = 0; gbc.gridy = 0; painel.add(btnBackup, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; painel.add(btnImportarBackup, gbc);
+    // Adicionando os botões ao painel
+    gbc.gridx = 0;
+    gbc.gridy = 2;
+    painel.add(btnBackup, gbc);
 
-        return painel;
-    }
+    gbc.gridx = 0;
+    gbc.gridy = 3;
+    painel.add(btnImportarBackup, gbc);
+
+    // Mensagem adicional de segurança
+    JLabel mensagemSeguranca = new JLabel("<html><i>Recomenda-se criar um backup antes de importar dados.</i></html>");
+    mensagemSeguranca.setFont(new Font("Arial", Font.PLAIN, 12));
+    mensagemSeguranca.setForeground(new Color(150, 50, 50));
+    gbc.gridy = 4;
+    painel.add(mensagemSeguranca, gbc);
+
+    return painel;
+}
+private JButton criarBotaoComEstilo(String texto, String iconeCaminho, ActionListener acao) {
+    JButton botao = new JButton(texto);
+    botao.setFont(new Font("Arial", Font.BOLD, 14));
+    botao.setBackground(new Color(70, 130, 180)); // Azul moderno
+    botao.setForeground(Color.WHITE);
+    botao.setIcon(new ImageIcon(iconeCaminho)); // Ícone correspondente
+    botao.setFocusPainted(false);
+    botao.setBorderPainted(false);
+    botao.setPreferredSize(new Dimension(200, 40));
+    botao.addActionListener(acao);
+    return botao;
+}
+
 
     private JButton criarBotao(String texto, java.awt.event.ActionListener acao) {
         JButton botao = new JButton(texto);
