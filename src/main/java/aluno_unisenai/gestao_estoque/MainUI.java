@@ -158,47 +158,112 @@ public class MainUI extends JFrame {
 
     // Botão Atualizar
     JButton btnAtualizar = criarBotao("Atualizar", e -> {
-        try {
-            int id = Integer.parseInt(txtId.getText());
-            Produto produtoExistente = produtoDAO.obterPorId(id);
-
-            if (produtoExistente != null) {
-                String nome = txtNome.getText().trim();
-                String quantidadeStr = txtQuantidade.getText().trim();
-                String precoStr = txtPreco.getText().trim();
-                String categoria = txtCategoria.getText().trim();
-                String descricao = txtDescricao.getText().trim();
-                String dataValidadeStr = txtDataValidade.getText().trim();
-
-                if (!nome.isEmpty()) produtoExistente.setNome(nome);
-                if (!quantidadeStr.isEmpty()) produtoExistente.setQuantidade(Integer.parseInt(quantidadeStr));
-                if (!precoStr.isEmpty()) produtoExistente.setPreco(Double.parseDouble(precoStr));
-                if (!categoria.isEmpty()) produtoExistente.setCategoria(categoria);
-                if (!descricao.isEmpty()) produtoExistente.setDescricao(descricao);
-                if (!dataValidadeStr.isEmpty()) produtoExistente.setDataValidade(LocalDate.parse(dataValidadeStr, formatter));
-
-                produtoDAO.atualizar(produtoExistente);
-                JOptionPane.showMessageDialog(this, "Produto atualizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-
-                // Limpar campos após a atualização
-                txtId.setText("");
-                txtNome.setText("");
-                txtQuantidade.setText("");
-                txtPreco.setText("");
-                txtCategoria.setText("");
-                txtDataValidade.setText("");
-                txtDescricao.setText("");
-            } else {
-                JOptionPane.showMessageDialog(this, "Produto não encontrado!", "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "ID, Quantidade e Preço devem ser números válidos!", "Erro", JOptionPane.ERROR_MESSAGE);
-        } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "A data deve estar no formato dd/MM/yyyy!", "Erro", JOptionPane.ERROR_MESSAGE);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao atualizar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+    try {
+        // Verificação e conversão do ID
+        String idStr = txtId.getText().trim();
+        if (idStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "O campo ID é obrigatório!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
         }
-    });
+        int id = Integer.parseInt(idStr);
+
+        Produto produtoExistente = produtoDAO.obterPorId(id);
+
+        if (produtoExistente != null) {
+            // Captura dos valores dos campos
+            String nome = txtNome.getText().trim();
+            String quantidadeStr = txtQuantidade.getText().trim();
+            String precoStr = txtPreco.getText().trim();
+            String categoria = txtCategoria.getText().trim();
+            String descricao = txtDescricao.getText().trim();
+            String dataValidadeStr = txtDataValidade.getText().trim();
+
+            // Validação do campo Nome
+            if (nome.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "O campo Nome é obrigatório!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Validação do campo Quantidade
+            if (quantidadeStr.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "O campo Quantidade é obrigatório!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            int quantidade;
+            try {
+                quantidade = Integer.parseInt(quantidadeStr);
+                if (quantidade <= 0) {
+                    JOptionPane.showMessageDialog(this, "Quantidade não pode ser menor que zero!", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Quantidade deve ser um número inteiro válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Validação do campo Preço
+            if (precoStr.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "O campo Preço é obrigatório!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            double preco;
+            try {
+                preco = Double.parseDouble(precoStr);
+                if (preco < 0) {
+                    JOptionPane.showMessageDialog(this, "Preço não pode ser negativo!", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Preço deve ser um número válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Validação da Data de Validade
+            if (!dataValidadeStr.isEmpty()) {
+                try {
+                    LocalDate dataValidade = LocalDate.parse(dataValidadeStr, formatter);
+                    if (dataValidade.isBefore(LocalDate.now())) {
+                        JOptionPane.showMessageDialog(this, "A data de validade não pode ser no passado!", "Erro", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    produtoExistente.setDataValidade(dataValidade);
+                } catch (DateTimeParseException ex) {
+                    JOptionPane.showMessageDialog(this, "A data deve estar no formato dd/MM/yyyy!", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            // Atualização dos campos no objeto produto
+            produtoExistente.setNome(nome);
+            produtoExistente.setQuantidade(quantidade);
+            produtoExistente.setPreco(preco);
+            if (!categoria.isEmpty()) produtoExistente.setCategoria(categoria);
+            if (!descricao.isEmpty()) produtoExistente.setDescricao(descricao);
+
+            // Atualização no banco de dados
+            produtoDAO.atualizar(produtoExistente);
+            JOptionPane.showMessageDialog(this, "Produto atualizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+
+            // Limpar campos após a atualização
+            txtId.setText("");
+            txtNome.setText("");
+            txtQuantidade.setText("");
+            txtPreco.setText("");
+            txtCategoria.setText("");
+            txtDataValidade.setText("");
+            txtDescricao.setText("");
+        } else {
+            JOptionPane.showMessageDialog(this, "Produto não encontrado!", "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (NumberFormatException ex) {
+        JOptionPane.showMessageDialog(this, "ID deve ser um número inteiro válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this, "Erro ao atualizar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+    }
+});
+
 
     // Adicionando componentes ao painel
     gbc.gridx = 0; gbc.gridy = 0; painel.add(lblId, gbc);
@@ -226,7 +291,7 @@ public class MainUI extends JFrame {
     gbc.gridx = 1; gbc.gridy = 7; painel.add(btnAtualizar, gbc);
 
     return painel;
-}
+};
 
 
     private JPanel criarPainelListar() {
@@ -337,7 +402,7 @@ public class MainUI extends JFrame {
             double preco = Double.parseDouble(precoStr);
             LocalDate dataValidade = dataValidadeStr.isBlank() ? null : LocalDate.parse(dataValidadeStr, formatter);
 
-            if (quantidade < 0 || preco < 0) {
+            if (quantidade <= 0 || preco <= 0) {
                 throw new NumberFormatException();
             }
 
