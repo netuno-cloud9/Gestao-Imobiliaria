@@ -121,9 +121,9 @@ public class TelaLogin extends JFrame {
         String user = Configuracao.get("db.user");
         String password = Configuracao.get("db.password");
 
-        System.out.println("Tentando conectar ao banco de dados:");
-        System.out.println("URL: " + url);
-        System.out.println("Usuário: " + user);
+//        System.out.println("Tentando conectar ao banco de dados:");
+//        System.out.println("URL: " + url);
+//        System.out.println("Usuario: " + user);
 
         String sql = "SELECT senha FROM usuarios WHERE nome_usuario = ?";
 
@@ -135,10 +135,12 @@ public class TelaLogin extends JFrame {
 
             if (rs.next()) {
                 String senhaArmazenada = rs.getString("senha");
-                System.out.println("Senha armazenada para o usuário: " + senhaArmazenada);
+                // Remova ou substitua por um log genérico:
+                System.out.println("Usuario encontrado: " + usuario);
+
                 return senha.equals(senhaArmazenada); // Comparação direta (considere hashing para produção)
             } else {
-                System.out.println("Usuário não encontrado: " + usuario);
+                System.out.println("Usuario não encontrado: " + usuario);
             }
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Erro ao conectar ao banco remoto: " + ex.getMessage(),

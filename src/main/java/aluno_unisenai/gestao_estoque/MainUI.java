@@ -59,7 +59,7 @@ public class MainUI extends JFrame {
 
     private void exibirSobre() {
         JOptionPane.showMessageDialog(this,
-                "Sistema de Gerenciamento de Estoque\nVersão 1.0\nDesenvolvido por Unisenai",
+                "Sistema de Gerenciamento de Estoque\nVersão 1.0\nDesenvolvido por Paulo Victor",
                 "Sobre",
                 JOptionPane.INFORMATION_MESSAGE);
     }
