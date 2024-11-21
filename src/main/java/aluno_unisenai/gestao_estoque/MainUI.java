@@ -2,10 +2,21 @@ package aluno_unisenai.gestao_estoque;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.nio.file.Files; // Importação adicionada
 
 public class MainUI extends JFrame {
 
+    private final ProdutoDAO produtoDAO;
+
     public MainUI() {
+        produtoDAO = new ProdutoDAO();
+
         setTitle("Gerenciamento de Estoque");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -20,12 +31,14 @@ public class MainUI extends JFrame {
         JMenuBar menuBar = new JMenuBar();
 
         JMenu menuArquivo = new JMenu("Arquivo");
+        JMenuItem itemExportar = criarMenuItem("Exportar para CSV", e -> exportarParaCSV());
         JMenuItem itemSair = criarMenuItem("Sair", e -> {
             int escolha = JOptionPane.showConfirmDialog(this, "Deseja realmente sair?", "Confirmação", JOptionPane.YES_NO_OPTION);
             if (escolha == JOptionPane.YES_OPTION) {
                 System.exit(0);
             }
         });
+        menuArquivo.add(itemExportar);
         menuArquivo.add(itemSair);
         menuBar.add(menuArquivo);
 
@@ -62,100 +75,320 @@ public class MainUI extends JFrame {
         add(tabbedPane, BorderLayout.CENTER);
     }
 
-    private JPanel criarPainelAdicionar() {
-        JPanel painel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+    private JPanel criarPainelAtualizar() {
+    // Painel principal com layout moderno
+    JPanel painel = new JPanel(new GridBagLayout());
+    painel.setBackground(new Color(240, 240, 240)); // Fundo claro
 
-        JLabel lblNome = new JLabel("Nome:");
-        JTextField txtNome = new JTextField(20);
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel lblQuantidade = new JLabel("Quantidade:");
-        JTextField txtQuantidade = new JTextField(10);
+    // Formatter para o formato esperado
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-        JLabel lblPreco = new JLabel("Preço:");
-        JTextField txtPreco = new JTextField(10);
+    // ID
+    JLabel lblId = new JLabel("ID do Produto:");
+    lblId.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtId = new JTextField(10);
+    txtId.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        JButton btnAdicionar = criarBotao("Adicionar", e -> {
-            String nome = txtNome.getText();
-            String quantidadeStr = txtQuantidade.getText();
-            String precoStr = txtPreco.getText();
+    // Nome
+    JLabel lblNome = new JLabel("Nome:");
+    lblNome.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtNome = new JTextField(20);
+    txtNome.setFont(new Font("Arial", Font.PLAIN, 14));
 
-            if (nome.isBlank() || quantidadeStr.isBlank() || precoStr.isBlank()) {
-                JOptionPane.showMessageDialog(this, "Por favor, preencha todos os campos!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
+    // Quantidade
+    JLabel lblQuantidade = new JLabel("Quantidade:");
+    lblQuantidade.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtQuantidade = new JTextField(10);
+    txtQuantidade.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Preço
+    JLabel lblPreco = new JLabel("Preço:");
+    lblPreco.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtPreco = new JTextField(10);
+    txtPreco.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Categoria
+    JLabel lblCategoria = new JLabel("Categoria:");
+    lblCategoria.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtCategoria = new JTextField(15);
+    txtCategoria.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Data de Validade
+    JLabel lblDataValidade = new JLabel("Data de Validade (dd/MM/yyyy):");
+    lblDataValidade.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtDataValidade = new JTextField(10);
+    txtDataValidade.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Descrição
+    JLabel lblDescricao = new JLabel("Descrição:");
+    lblDescricao.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextArea txtDescricao = new JTextArea(3, 20);
+    txtDescricao.setLineWrap(true);
+    txtDescricao.setWrapStyleWord(true);
+    txtDescricao.setFont(new Font("Arial", Font.PLAIN, 14));
+    JScrollPane descricaoScroll = new JScrollPane(txtDescricao);
+
+    // Botão Carregar Dados
+    JButton btnCarregar = criarBotao("Carregar Dados", e -> {
+        try {
+            int id = Integer.parseInt(txtId.getText());
+            Produto produto = produtoDAO.obterPorId(id);
+            if (produto != null) {
+                txtNome.setText(produto.getNome());
+                txtQuantidade.setText(String.valueOf(produto.getQuantidade()));
+                txtPreco.setText(String.valueOf(produto.getPreco()));
+                txtCategoria.setText(produto.getCategoria());
+                txtDataValidade.setText(produto.getDataValidade() != null ? produto.getDataValidade().format(formatter) : "");
+                txtDescricao.setText(produto.getDescricao());
+                JOptionPane.showMessageDialog(this, "Dados carregados com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Produto não encontrado!", "Erro", JOptionPane.ERROR_MESSAGE);
             }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "ID deve ser um número válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao buscar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    });
 
-            try {
-                int quantidade = Integer.parseInt(quantidadeStr);
-                double preco = Double.parseDouble(precoStr);
+    // Botão Atualizar
+    JButton btnAtualizar = criarBotao("Atualizar", e -> {
+        try {
+            int id = Integer.parseInt(txtId.getText());
+            Produto produtoExistente = produtoDAO.obterPorId(id);
 
-                if (quantidade < 0 || preco < 0) {
-                    throw new NumberFormatException();
-                }
+            if (produtoExistente != null) {
+                String nome = txtNome.getText().trim();
+                String quantidadeStr = txtQuantidade.getText().trim();
+                String precoStr = txtPreco.getText().trim();
+                String categoria = txtCategoria.getText().trim();
+                String descricao = txtDescricao.getText().trim();
+                String dataValidadeStr = txtDataValidade.getText().trim();
 
-                JOptionPane.showMessageDialog(this, "Produto adicionado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                if (!nome.isEmpty()) produtoExistente.setNome(nome);
+                if (!quantidadeStr.isEmpty()) produtoExistente.setQuantidade(Integer.parseInt(quantidadeStr));
+                if (!precoStr.isEmpty()) produtoExistente.setPreco(Double.parseDouble(precoStr));
+                if (!categoria.isEmpty()) produtoExistente.setCategoria(categoria);
+                if (!descricao.isEmpty()) produtoExistente.setDescricao(descricao);
+                if (!dataValidadeStr.isEmpty()) produtoExistente.setDataValidade(LocalDate.parse(dataValidadeStr, formatter));
+
+                produtoDAO.atualizar(produtoExistente);
+                JOptionPane.showMessageDialog(this, "Produto atualizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+
+                // Limpar campos após a atualização
+                txtId.setText("");
                 txtNome.setText("");
                 txtQuantidade.setText("");
                 txtPreco.setText("");
-
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Quantidade e preço devem ser números válidos!", "Erro", JOptionPane.ERROR_MESSAGE);
+                txtCategoria.setText("");
+                txtDataValidade.setText("");
+                txtDescricao.setText("");
+            } else {
+                JOptionPane.showMessageDialog(this, "Produto não encontrado!", "Erro", JOptionPane.ERROR_MESSAGE);
             }
-        });
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "ID, Quantidade e Preço devem ser números válidos!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "A data deve estar no formato dd/MM/yyyy!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao atualizar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    });
 
-        gbc.gridx = 0; gbc.gridy = 0; painel.add(lblNome, gbc);
-        gbc.gridx = 1; painel.add(txtNome, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; painel.add(lblQuantidade, gbc);
-        gbc.gridx = 1; painel.add(txtQuantidade, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; painel.add(lblPreco, gbc);
-        gbc.gridx = 1; painel.add(txtPreco, gbc);
-        gbc.gridx = 1; gbc.gridy = 3; painel.add(btnAdicionar, gbc);
+    // Adicionando componentes ao painel
+    gbc.gridx = 0; gbc.gridy = 0; painel.add(lblId, gbc);
+    gbc.gridx = 1; painel.add(txtId, gbc);
+    gbc.gridx = 2; painel.add(btnCarregar, gbc);
 
-        return painel;
-    }
+    gbc.gridx = 0; gbc.gridy = 1; painel.add(lblNome, gbc);
+    gbc.gridx = 1; painel.add(txtNome, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 2; painel.add(lblQuantidade, gbc);
+    gbc.gridx = 1; painel.add(txtQuantidade, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 3; painel.add(lblPreco, gbc);
+    gbc.gridx = 1; painel.add(txtPreco, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 4; painel.add(lblCategoria, gbc);
+    gbc.gridx = 1; painel.add(txtCategoria, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 5; painel.add(lblDataValidade, gbc);
+    gbc.gridx = 1; painel.add(txtDataValidade, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 6; painel.add(lblDescricao, gbc);
+    gbc.gridx = 1; painel.add(descricaoScroll, gbc);
+
+    gbc.gridx = 1; gbc.gridy = 7; painel.add(btnAtualizar, gbc);
+
+    return painel;
+}
+
 
     private JPanel criarPainelListar() {
-        JPanel painel = new JPanel(new BorderLayout());
+    JPanel painel = new JPanel(new BorderLayout());
 
-        JTextArea areaTexto = new JTextArea();
-        areaTexto.setEditable(false);
+    JTextArea areaTexto = new JTextArea();
+    areaTexto.setEditable(false);
 
-        JButton btnListar = criarBotao("Atualizar Lista", e -> {
-            // Exemplo estático
-            areaTexto.setText("Produto 1 - Quantidade: 10\nProduto 2 - Quantidade: 5\n");
-        });
+    JCheckBox chkBaixoEstoque = new JCheckBox("Mostrar apenas produtos com menos de 10 itens em estoque");
 
-        painel.add(new JScrollPane(areaTexto), BorderLayout.CENTER);
-        painel.add(btnListar, BorderLayout.SOUTH);
+    JButton btnListar = criarBotao("Atualizar Lista", e -> {
+        try {
+            List<Produto> produtos = produtoDAO.listarTodos();
+            StringBuilder sb = new StringBuilder();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            for (Produto p : produtos) {
+                // Aplica o filtro se o checkbox estiver marcado
+                if (!chkBaixoEstoque.isSelected() || p.getQuantidade() < 10) {
+                    sb.append("ID: ").append(p.getId())
+                      .append(" | Nome: ").append(p.getNome())
+                      .append(" | Quantidade: ").append(p.getQuantidade())
+                      .append("\n");
+                }
+            }
+            areaTexto.setText(sb.toString());
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao listar produtos: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    });
 
-        return painel;
-    }
+    JPanel painelSuperior = new JPanel(new BorderLayout());
+    painelSuperior.add(chkBaixoEstoque, BorderLayout.NORTH);
+    painelSuperior.add(new JScrollPane(areaTexto), BorderLayout.CENTER);
 
-    private JPanel criarPainelAtualizar() {
-        JPanel painel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+    painel.add(painelSuperior, BorderLayout.CENTER);
+    painel.add(btnListar, BorderLayout.SOUTH);
 
-        JLabel lblId = new JLabel("ID:");
-        JTextField txtId = new JTextField(10);
+    return painel;
+}
 
-        JLabel lblNovaQuantidade = new JLabel("Nova Quantidade:");
-        JTextField txtNovaQuantidade = new JTextField(10);
+    private JPanel criarPainelAdicionar() {
+    // Painel principal com layout moderno
+    JPanel painel = new JPanel(new GridBagLayout());
+    painel.setBackground(new Color(240, 240, 240)); // Fundo claro
 
-        JButton btnAtualizar = criarBotao("Atualizar", e -> {
-            // Exemplo de mensagem estática
-            JOptionPane.showMessageDialog(this, "Produto atualizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-        });
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        gbc.gridx = 0; gbc.gridy = 0; painel.add(lblId, gbc);
-        gbc.gridx = 1; painel.add(txtId, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; painel.add(lblNovaQuantidade, gbc);
-        gbc.gridx = 1; painel.add(txtNovaQuantidade, gbc);
-        gbc.gridx = 1; gbc.gridy = 2; painel.add(btnAtualizar, gbc);
+    // Formatter para o formato esperado
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-        return painel;
-    }
+    // Nome
+    JLabel lblNome = new JLabel("Nome:");
+    lblNome.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtNome = new JTextField(20);
+    txtNome.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Quantidade
+    JLabel lblQuantidade = new JLabel("Quantidade:");
+    lblQuantidade.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtQuantidade = new JTextField(10);
+    txtQuantidade.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Preço
+    JLabel lblPreco = new JLabel("Preço:");
+    lblPreco.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtPreco = new JTextField(10);
+    txtPreco.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Categoria
+    JLabel lblCategoria = new JLabel("Categoria:");
+    lblCategoria.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtCategoria = new JTextField(15);
+    txtCategoria.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Data de Validade
+    JLabel lblDataValidade = new JLabel("Data de Validade (dd/MM/yyyy):");
+    lblDataValidade.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextField txtDataValidade = new JTextField(10);
+    txtDataValidade.setFont(new Font("Arial", Font.PLAIN, 14));
+
+    // Descrição
+    JLabel lblDescricao = new JLabel("Descrição:");
+    lblDescricao.setFont(new Font("Arial", Font.BOLD, 14));
+    JTextArea txtDescricao = new JTextArea(3, 20);
+    txtDescricao.setLineWrap(true);
+    txtDescricao.setWrapStyleWord(true);
+    txtDescricao.setFont(new Font("Arial", Font.PLAIN, 14));
+    JScrollPane descricaoScroll = new JScrollPane(txtDescricao);
+
+    // Botão Adicionar com ícone
+    JButton btnAdicionar = criarBotao("Adicionar", e -> {
+        String nome = txtNome.getText();
+        String quantidadeStr = txtQuantidade.getText();
+        String precoStr = txtPreco.getText();
+        String categoria = txtCategoria.getText();
+        String dataValidadeStr = txtDataValidade.getText();
+        String descricao = txtDescricao.getText();
+
+        if (nome.isBlank() || quantidadeStr.isBlank() || precoStr.isBlank() || categoria.isBlank()) {
+            JOptionPane.showMessageDialog(this, "Por favor, preencha todos os campos!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            int quantidade = Integer.parseInt(quantidadeStr);
+            double preco = Double.parseDouble(precoStr);
+            LocalDate dataValidade = dataValidadeStr.isBlank() ? null : LocalDate.parse(dataValidadeStr, formatter);
+
+            if (quantidade < 0 || preco < 0) {
+                throw new NumberFormatException();
+            }
+
+            Produto produto = new Produto(0, nome, quantidade, preco, categoria, dataValidade, descricao);
+            produtoDAO.inserir(produto);
+
+            JOptionPane.showMessageDialog(this, "Produto adicionado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+
+            // Limpa os campos
+            txtNome.setText("");
+            txtQuantidade.setText("");
+            txtPreco.setText("");
+            txtCategoria.setText("");
+            txtDataValidade.setText("");
+            txtDescricao.setText("");
+
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantidade e preço devem ser números válidos!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "A data deve estar no formato dd/MM/yyyy!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao inserir produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    });
+
+    btnAdicionar.setIcon(new ImageIcon("resources/add_icon.png")); // Adicione um ícone aqui
+    btnAdicionar.setFont(new Font("Arial", Font.BOLD, 14));
+
+    // Adicionando componentes ao painel
+    gbc.gridx = 0; gbc.gridy = 0; painel.add(lblNome, gbc);
+    gbc.gridx = 1; painel.add(txtNome, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 1; painel.add(lblQuantidade, gbc);
+    gbc.gridx = 1; painel.add(txtQuantidade, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 2; painel.add(lblPreco, gbc);
+    gbc.gridx = 1; painel.add(txtPreco, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 3; painel.add(lblCategoria, gbc);
+    gbc.gridx = 1; painel.add(txtCategoria, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 4; painel.add(lblDataValidade, gbc);
+    gbc.gridx = 1; painel.add(txtDataValidade, gbc);
+
+    gbc.gridx = 0; gbc.gridy = 5; painel.add(lblDescricao, gbc);
+    gbc.gridx = 1; painel.add(descricaoScroll, gbc);
+
+    gbc.gridx = 1; gbc.gridy = 6; painel.add(btnAdicionar, gbc);
+
+    return painel;
+}
+
 
     private JPanel criarPainelExcluir() {
         JPanel painel = new JPanel(new GridBagLayout());
@@ -166,7 +399,16 @@ public class MainUI extends JFrame {
         JTextField txtId = new JTextField(10);
 
         JButton btnExcluir = criarBotao("Excluir", e -> {
-            JOptionPane.showMessageDialog(this, "Produto excluído com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                int id = Integer.parseInt(txtId.getText());
+                produtoDAO.excluir(id);
+                JOptionPane.showMessageDialog(this, "Produto excluído com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                txtId.setText("");
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "ID deve ser um número válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Erro ao excluir produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         gbc.gridx = 0; gbc.gridy = 0; painel.add(lblId, gbc);
@@ -177,13 +419,42 @@ public class MainUI extends JFrame {
     }
 
     private JPanel criarPainelBackup() {
-        JPanel painel = new JPanel();
+        JPanel painel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
 
         JButton btnBackup = criarBotao("Realizar Backup", e -> {
-            JOptionPane.showMessageDialog(this, "Backup realizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Salvar Backup");
+            int userSelection = fileChooser.showSaveDialog(this);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                java.io.File fileToSave = fileChooser.getSelectedFile();
+                try {
+                    produtoDAO.realizarBackupParaCSV(fileToSave.getAbsolutePath());
+                    JOptionPane.showMessageDialog(this, "Backup realizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Erro ao realizar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         });
 
-        painel.add(btnBackup);
+        JButton btnImportarBackup = criarBotao("Importar Backup", e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Selecionar Backup para Importar");
+            int userSelection = fileChooser.showOpenDialog(this);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                java.io.File fileToImport = fileChooser.getSelectedFile();
+                try {
+                    produtoDAO.importarBackupDeCSV(fileToImport.getAbsolutePath());
+                    JOptionPane.showMessageDialog(this, "Backup importado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Erro ao importar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        gbc.gridx = 0; gbc.gridy = 0; painel.add(btnBackup, gbc);
+        gbc.gridx = 0; gbc.gridy = 1; painel.add(btnImportarBackup, gbc);
 
         return painel;
     }
@@ -197,7 +468,35 @@ public class MainUI extends JFrame {
         return botao;
     }
 
+    private void exportarParaCSV() {
+        try {
+            List<Produto> produtos = produtoDAO.listarTodos();
+            StringBuilder sb = new StringBuilder();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            sb.append("ID;Nome;Quantidade;Preço;Categoria;DataValidade\n");
+            for (Produto p : produtos) {
+                sb.append(p.getId()).append(";")
+                  .append(p.getNome()).append(";")
+                  .append(p.getQuantidade()).append(";")
+                  .append(p.getPreco()).append(";")
+                  .append(p.getCategoria()).append(";")
+                  .append(p.getDataValidade() != null ? p.getDataValidade().format(formatter) : "")
+                  .append("\n");
+            }
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Salvar arquivo CSV");
+            int userSelection = fileChooser.showSaveDialog(this);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                java.io.File fileToSave = fileChooser.getSelectedFile();
+                Files.write(fileToSave.toPath(), sb.toString().getBytes());
+                JOptionPane.showMessageDialog(this, "Exportação realizada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (HeadlessException | IOException | SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao exportar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new TelaLogin().setVisible(true));
+        SwingUtilities.invokeLater(() -> new MainUI().setVisible(true));
     }
 }

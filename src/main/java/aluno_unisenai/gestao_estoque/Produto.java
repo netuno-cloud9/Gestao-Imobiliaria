@@ -3,32 +3,43 @@ package aluno_unisenai.gestao_estoque;
 import java.time.LocalDate;
 
 public class Produto {
-    private int id;
-    private String nome;
-    private int quantidade;
+    private int id; // Identificador único do produto
+    private String nome; // Nome do produto
+    private int quantidade; // Quantidade disponível em estoque
     private double preco; // Preço unitário do produto
     private String categoria; // Categoria do produto (ex: alimentos, bebidas, etc.)
     private LocalDate dataValidade; // Data de validade do produto
+    private String descricao; // Descrição detalhada do produto
 
     // Construtores
-    public Produto(String string, int aInt) {}
 
-    public Produto(String nome, int quantidade, double preco, String categoria, LocalDate dataValidade) {
+    /**
+     * Construtor completo com todos os campos.
+     */
+    public Produto(int id, String nome, int quantidade, double preco, String categoria, LocalDate dataValidade, String descricao) {
+        this(nome, quantidade, preco, categoria, dataValidade, descricao);
+        this.id = id;
+    }
+
+    /**
+     * Construtor sem ID (para produtos ainda não persistidos no banco de dados).
+     */
+    public Produto(String nome, int quantidade, double preco, String categoria, LocalDate dataValidade, String descricao) {
         if (quantidade < 0) throw new IllegalArgumentException("Quantidade não pode ser negativa.");
         if (preco < 0) throw new IllegalArgumentException("Preço não pode ser negativo.");
+        if (nome == null || nome.isBlank()) throw new IllegalArgumentException("Nome não pode ser vazio.");
+        if (categoria == null || categoria.isBlank()) throw new IllegalArgumentException("Categoria não pode ser vazia.");
+
         this.nome = nome;
         this.quantidade = quantidade;
         this.preco = preco;
         this.categoria = categoria;
         this.dataValidade = dataValidade;
-    }
-
-    public Produto(int id, String nome, int quantidade, double preco, String categoria, LocalDate dataValidade) {
-        this(nome, quantidade, preco, categoria, dataValidade);
-        this.id = id;
+        this.descricao = descricao != null ? descricao : "";
     }
 
     // Getters e Setters
+
     public int getId() {
         return id;
     }
@@ -84,11 +95,32 @@ public class Produto {
         this.dataValidade = dataValidade;
     }
 
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public void setDescricao(String descricao) {
+        if (descricao == null) {
+            this.descricao = "";
+        } else {
+            this.descricao = descricao;
+        }
+    }
+
     // Métodos Auxiliares
+
+    /**
+     * Verifica se o produto está válido (baseado na data de validade).
+     * @return 
+     */
     public boolean isValido() {
         return dataValidade == null || !dataValidade.isBefore(LocalDate.now());
     }
 
+    /**
+     * Calcula o valor total do estoque baseado na quantidade e preço.
+     * @return 
+     */
     public double calcularValorTotal() {
         return quantidade * preco;
     }
@@ -102,6 +134,7 @@ public class Produto {
                 ", preco=" + preco +
                 ", categoria='" + categoria + '\'' +
                 ", dataValidade=" + dataValidade +
+                ", descricao='" + descricao + '\'' +
                 ", valido=" + isValido() +
                 '}';
     }
